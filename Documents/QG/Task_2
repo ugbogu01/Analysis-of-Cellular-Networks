@@ -1,0 +1,191 @@
+---
+title: "810283_Quantitative_Genetics_Ex2"
+author: "Ugbogu Elton"
+date: "2023-11-28"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Read the data of wheat hydribds
+
+```{r}
+wheathybrids = read.csv("Ex2.csv")
+```
+
+
+# List of packages
+```{r}
+lib <- c("fastDummies", "tidyr", "ggplot2", "pegas", "tidyverse", "multcomp",
+         "lme4", "lmerTest", "EMSaov", "qtl", "rrBLUP", "BGLR", "broom")
+```
+
+```{r}
+# Install and load missing packages
+install.packages(setdiff(lib, rownames(installed.packages())))
+library("ggplot2")
+library("Matrix")
+library("lme4")
+```
+
+#1
+# Scatter plot for soil against yield with a color gradient for sire groups
+```{r}
+ggplot(wheathybrids, aes(x = soil, y = yield, color = sire, group = sire)) +
+  geom_point(size = 3, alpha = 0.8) +
+  theme_minimal() +
+  scale_color_gradientn(colors = c("blue", "red")) +
+  geom_smooth(method = lm, se = FALSE, size = 0.5, alpha = 0.8) +
+  labs(title = "Scatter Plot of Soil against Yield with Separate Regression Lines for Sire",
+       x = "Soil",
+       y = "Yield",
+       color = "Sire")
+```
+
+```{r}
+ggplot2::ggsave("soil_yield_sire.png")
+
+```
+#Yes the intercept and the slopes based on the plot are different
+
+#1_2
+
+# Scatter plot for soil against yield with a color gradient for dame groups
+```{r}
+ggplot(wheathybrids, aes(x = soil, y = yield, color = dame, group = dame)) +
+  geom_point(size = 3, alpha = 0.8) +
+  theme_minimal() +
+  scale_color_gradientn(colors = c("blue", "red")) +
+  geom_smooth(method = lm, se = FALSE, size = 0.5, alpha = 0.8) +
+  labs(title = "Scatter Plot of Soil against Yield with Separate Regression Lines for Sire",
+       x = "Soil",
+       y = "Yield",
+       color = "dame")
+```
+#Yes the intercepts and slopes are different for dame groups
+
+##2
+
+#Build a linear mixed model with soil as a fixed effect and sire as a random effect with a random intercept only, 
+```{r}
+# install.packages("nlme")
+library(nlme)
+
+# Fit the linear mixed model
+mixed_model <- lme(yield ~ soil, random = ~ 1 | sire, data = wheathybrids)
+
+# Print the summary of the model
+model_summary <- summary(mixed_model)
+```
+# Extract the estimated value for fixed effects (i.e regression coefficients).
+```{r}
+fixed_effects <- coef(model_summary)
+print(fixed_effects)
+```
+
+# Extract the estimated random effects (i.e variance components).
+```{r}
+random_effects <- VarCorr(mixed_model)
+print(random_effects)
+```
+
+# Display p-values for fixed effects
+```{r}
+print("P-values for Fixed Effects:")
+print(summary(mixed_model)$tTable[, "p-value"])
+```
+
+# Display likelihood ratio test for fixed effects
+```{r}
+lrt_fixed <- anova(mixed_model)
+print(lrt_fixed)
+```
+
+# Display likelihood ratio test for random effects
+```{r}
+lrt_random <- anova(mixed_model)
+print(lrt_random)
+```
+
+#2
+# Install and load the required packages if not already installed
+# install.packages(c("lme4", "lmerTest"))
+#library(lme4)
+```{r}
+library(lmerTest)
+
+data <- data.frame(wheathybrids)
+
+
+# Assuming 'data' is your data frame, 'yield' is the response variable, 'soil' is the fixed effect, and 'sire' is the random effect with random intercept
+
+# Fit the linear mixed model using lmerTest
+IntModel <- lmerTest::lmer(yield ~ soil + (1 | sire), data = wheathybrids)
+
+# Display the summary including p-values for fixed effects and random effects
+summary(IntModel)
+```
+
+#p-value for random effect??
+#Hausman test??
+
+
+##3
+
+#Build a linear mixed model with soil as a fixed effect and dame as a random effect with a random slope only, 
+
+# Assuming 'yield' is the response variable, 'soil' is the fixed effect, and 'dame' is the grouping variable
+
+# Fit the linear mixed model
+#The (0 + ...) part indicates that there is no random intercept, only a random slope.
+```{r}
+SloModel_only <- lmer(yield ~ soil + (0 + soil | dame), data = wheathybrids)
+
+# Print the summary of the model
+summary_output <- summary(SloModel_only)
+```
+# Extract estimated values for fixed effects (i.e regression coefficients)
+```{r}
+fixed_effects <- fixef(SloModel_only)
+print("Estimated values for  Effects:", fixed_effects)
+```
+
+# Extract estimated random effects (i.e variance components)
+```{r}
+random_effects <- VarCorr(SloModel_only)
+print("Estimated Random Effects:")
+print(random_effects$name_of_interest, digits = 3)
+
+```
+
+# Display p-values for fixed effects
+```{r}
+print("P-values for Fixed Effects:")
+```
+#is it signifiant?
+```{r}
+print(summary_output$coefficients[, "Pr(>|t|)"])
+```
+
+
+#4
+#This model specification includes a fixed effect for "soil," and suggests a 
+#random intercept for "sire" ((1 | sire)), 
+#and a random slope for "soil" within levels of "dame" ((soil | dame)
+```{r}
+random_intercept_slope <- lmer(yield ~ soil + (1 | sire) + (soil | dame), data = wheathybrids)
+summary(random_intercept_slope)
+```
+
+#The estimated values for fixed effects (i.e. regression coefficient) 
+#The random effect. s (i.e. variance component), 
+#Random effect significance test
+#Using the function ranova in the lmerTest package 
+```{r}
+ranova(random_intercept_slope)
+```
+#The corresponding p-values in significance test based on the output in R
